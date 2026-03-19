@@ -70,10 +70,22 @@ export async function parseUploadFile(file: File): Promise<ScoutAwardInfo[]> {
             }
           }
 
+          let rawAward = String(row[awardIdx]).trim();
+          const rawType = String(row[typeIdx]).trim();
+
+          // Clean up the dirty award strings like "Swimming (2022 rqmts)*"
+          if (rawType.toLowerCase().includes("merit badge")) {
+             // Remove any parenthetical grouping and asterisks from Merit Badges
+             rawAward = rawAward.replace(/\s*\(.*?\)/g, "").replace(/\*/g, "").trim();
+          } else {
+             // Just remove asterisks for other awards, but preserve things like "(gold pin)"
+             rawAward = rawAward.replace(/\*/g, "").trim();
+          }
+
           parsedData.push({
             scoutName: rawName,
-            type: String(row[typeIdx]).trim(),
-            award: String(row[awardIdx]).trim(),
+            type: rawType,
+            award: rawAward,
             earnedDate: earnedIdx !== -1 ? row[earnedIdx] : undefined,
           });
         }
