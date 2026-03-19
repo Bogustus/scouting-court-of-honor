@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { FileUp, File, X, Download } from "lucide-react";
+import { FileUp, File, X, Download, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseUploadFile, type ScoutAwardInfo } from "./lib/parser";
 import { generateDocxScript, type ScriptOptions } from "./lib/generator";
@@ -62,6 +62,47 @@ export default function App() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleGenerateEmail = () => {
+    if (data.length === 0) return;
+
+    // Isolate unique scout names and format them
+    const uniqueScouts = Array.from(new Set(data.map(d => d.originalName))).sort((a, b) => a.localeCompare(b));
+    
+    // Attempt to compute the day of the week
+    let dayOfWeek = "Monday";
+    try {
+      const d = new Date(options.date);
+      if (!isNaN(d.getTime())) {
+        dayOfWeek = d.toLocaleDateString("en-US", { weekday: "long" });
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Clean up the time if it's "7:00PM-8:00PM" -> "7pm"
+    let displayTime = options.time.split("-")[0];
+    if (displayTime.includes(":00")) {
+      displayTime = displayTime.replace(":00", "").toLowerCase();
+    } else {
+      displayTime = displayTime.toLowerCase();
+    }
+
+    const emailContent = `${dayOfWeek} night we have our next Court of Honor at ${displayTime} at ${options.location}.
+
+The following scouts will be recognized at the Court of Honor:
+
+${uniqueScouts.join('\n')}
+`;
+
+    const blob = new Blob([emailContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "CoH_Email_Draft.txt";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
@@ -220,18 +261,33 @@ export default function App() {
               />
             </label>
 
-            <button
-              onClick={handleGenerate}
-              disabled={fileRecords.length === 0 || isGenerating}
-              className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all duration-300 ${
-                fileRecords.length > 0
-                  ? "bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40"
-                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
-              }`}
-            >
-              <Download size={22} />
-              {isGenerating ? "Generating..." : "Generate & Download Document"}
-            </button>
+            <div className="flex flex-col xl:flex-row gap-3 pt-2">
+              <button
+                onClick={handleGenerate}
+                disabled={fileRecords.length === 0 || isGenerating}
+                className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-all duration-300 ${
+                  fileRecords.length > 0
+                    ? "bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-500/25"
+                    : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                }`}
+              >
+                <Download size={20} />
+                {isGenerating ? "Generating..." : "Docx Script"}
+              </button>
+
+              <button
+                onClick={handleGenerateEmail}
+                disabled={fileRecords.length === 0 || isGenerating}
+                className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-all duration-300 ${
+                  fileRecords.length > 0
+                    ? "bg-slate-700 hover:bg-slate-600 text-white shadow-lg shadow-slate-900/50"
+                    : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                }`}
+              >
+                <Mail size={20} />
+                Email Draft (.txt)
+              </button>
+            </div>
           </div>
         </motion.section>
       </main>

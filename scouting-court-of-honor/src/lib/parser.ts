@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 
 export interface ScoutAwardInfo {
   scoutName: string;
+  originalName: string;
   type: string;
   award: string;
   earnedDate?: string | number;
@@ -84,6 +85,7 @@ export async function parseUploadFile(file: File): Promise<ScoutAwardInfo[]> {
 
           parsedData.push({
             scoutName: rawName,
+            originalName: String(row[scoutIdx]).trim(),
             type: rawType,
             award: rawAward,
             earnedDate: earnedIdx !== -1 ? row[earnedIdx] : undefined,
