@@ -8,6 +8,8 @@ export interface ScriptOptions {
   mc1Name: string;
   mc2Name: string;
   scoutmasterName: string;
+  introTitle: string;
+  colorGuardNames: string;
 }
 
 const RANK_ORDER = [
@@ -43,6 +45,9 @@ export async function generateDocxScript(data: ScoutAwardInfo[], opts: ScriptOpt
           new Paragraph({
             text: `Masters of Ceremony: ${opts.mc1Name} and ${opts.mc2Name}`,
           }),
+          new Paragraph({
+            text: `Color Guard: ${opts.colorGuardNames}`,
+          }),
           new Paragraph(" "),
 
           new Paragraph({
@@ -66,29 +71,118 @@ export async function generateDocxScript(data: ScoutAwardInfo[], opts: ScriptOpt
           }),
           new Paragraph("Will the troop & audience please rise, hats off."),
           new Paragraph("Color guard, advance. [wait for color guard to reach the front and stop]"),
-          new Paragraph(
-            "Prepare to post the colors. [wait for color guard to cross flags and arrive at flag stands stop]"
-          ),
+          new Paragraph("Prepare to post the colors. [wait for color guard to cross flags and arrive at flag stands and stop]"),
           new Paragraph("Post the colors."),
           new Paragraph("Scouts, salute."),
-          new Paragraph('Please join me in the Pledge of Allegiance. ["I pledge allegiance..."]'),
-          new Paragraph('The Scout Oath. ["On my honor I will do my best..."]'),
+          new Paragraph('Please join me in the Pledge of Allegiance. [“I pledge allegiance to the Flag …"]'),
+          new Paragraph('Scout sign, The Scout Oath.  [“On my honor I will do my best…]'),
+          new Paragraph('The Scout Law [“A scout is…”]'),
           new Paragraph("Two."),
-          new Paragraph("Color guard, return to ranks."),
-          new Paragraph("Retreat."),
-          new Paragraph("Color guard, dismissed."),
-          new Paragraph("Troop and audience, you may be seated."),
+          new Paragraph("Color guard, return to ranks. [Wait for color guard to re-form as a single unit and stop]"),
+          new Paragraph("Color guard about, face."),
+          new Paragraph("Color guard forward march."),
+          new Paragraph("Color guard, dismissed. Troop at ease"),
           new Paragraph(" "),
 
           new Paragraph({
             children: [
               new TextRun({ text: `${opts.mc1Name}: `, bold: true }),
               new TextRun(
-                `At this time I would like to introduce our Unit Commissioner / Scoutmaster to give our ceremony's introduction.`
+                `At this time I would like to introduce our ${opts.introTitle} to give our ceremony's introduction.`
               ),
             ],
           }),
           new Paragraph(`[ ${opts.scoutmasterName}: Introduction ]`),
+          new Paragraph(" "),
+
+          // Candle Ceremony
+          new Paragraph({
+            text: "Candle Ceremony",
+            heading: HeadingLevel.HEADING_2,
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${opts.mc1Name}: `, bold: true }),
+              new TextRun("We are going to begin by lighting this candle which represents the spirit of Scouting."),
+            ],
+          }),
+          new Paragraph("We will now light a candle for each point of the Scout Law."),
+          new Paragraph("A Scout is:"),
+          new Paragraph(" "),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "TRUSTWORTHY: ", bold: true }),
+              new TextRun("A Scout tells the truth. They keep their promises. Honesty is part of the code of conduct. People can depend on scouts."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "LOYAL: ", bold: true }),
+              new TextRun("Scouts are true to their family, Scout leaders, friends, school, and nation."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "HELPFUL: ", bold: true }),
+              new TextRun("Scouts are concerned about other people. They do things willingly for others without pay or reward."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "FRIENDLY: ", bold: true }),
+              new TextRun("Scouts are friends to all. They are kind to other Scouts. They seek to understand others. They respect those with ideas and customs other than their own."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "COURTEOUS: ", bold: true }),
+              new TextRun("Scouts are polite to everyone regardless of age or position. They know good manners make it easier for people to get along together."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "KIND: ", bold: true }),
+              new TextRun("Scouts understand there is strength in being gentle. They treat others as they want to be treated. They do not hurt or kill harmless things without reason."),
+            ],
+          }),
+          new Paragraph(" "),
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${opts.mc2Name}: `, bold: true }),
+              new TextRun({ text: "OBEDIENT: ", bold: true }),
+              new TextRun("Scouts follow the rules of their family, school, and troop. They obey the laws of their community and country. If they think these rules and laws are unfair, they try to have them changed in an orderly manner rather than disobey them."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "CHEERFUL: ", bold: true }),
+              new TextRun("Scouts look for the bright side of things. They cheerfully do tasks that come their way. They try to make others happy."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "THRIFTY: ", bold: true }),
+              new TextRun("Scouts work to pay their way and to help others. They save for unforeseen needs. They protect and conserve natural resources. They carefully use time and property."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "BRAVE: ", bold: true }),
+              new TextRun("Scouts can face danger even if they are afraid. They have the courage to stand for what they think is right even if others laugh at or threaten them."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "CLEAN: ", bold: true }),
+              new TextRun("Scouts keep their body and mind fit and clean. They go around with those who believe in living by these same ideals. They help keep their home and community clean."),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "REVERENT: ", bold: true }),
+              new TextRun("Scouts are reverent toward God. They are faithful in their religious duties. They respect the beliefs of others."),
+            ],
+          }),
           new Paragraph(" "),
 
           // Rank Advancements
@@ -100,10 +194,16 @@ export async function generateDocxScript(data: ScoutAwardInfo[], opts: ScriptOpt
             children: [
               new TextRun({ text: `${opts.mc1Name}: `, bold: true }),
               new TextRun(
-                "Rank Advancement is an important part of the Scouting program. It gives the Scout opportunities to learn new skills and have new adventures. At this time, we would like to recognize those Scouts who have earned Rank Advancements."
+                "Rank Advancement is an important part of the Scouting program. It gives the Scout opportunities to learn new skills and have new adventures. Presenting the Scout with a new rank lets them show off the completion of a set of skills and adventures, and hopefully, encourages them on the Trail of Eagle Scout."
               ),
             ],
           }),
+          new Paragraph("At this time, we would like to recognize those Scouts who have earned Rank Advancements."),
+          new Paragraph("Scouting America recognizes your achievements by awarding badges of rank. There are seven ranks: Scout, Tenderfoot, Second Class, First Class, Star, Life and the highest rank is the coveted “Eagle.”"),
+          new Paragraph("Some examples of Famous Eagle Scouts:"),
+          new Paragraph({ text: "James Valentine the guitarist of the band Maroon 5", bullet: { level: 0 } }),
+          new Paragraph({ text: "Dan Reynolds lead singer of the band Imagine Dragons", bullet: { level: 0 } }),
+          new Paragraph({ text: "Glen Schofield one of the creators of the call of duty franchise", bullet: { level: 0 } }),
           new Paragraph({
             children: [
               new TextRun({ text: `${opts.mc2Name}: `, bold: true }),
@@ -172,14 +272,16 @@ export async function generateDocxScript(data: ScoutAwardInfo[], opts: ScriptOpt
               new TextRun(`Thank you. Will the troop & audience please rise, hats off.`),
             ],
           }),
-          new Paragraph("Color guard, advance. [wait]"),
-          new Paragraph("Prepare to retire the colors. [wait]"),
-          new Paragraph("Scouts, salute the American flag."),
+          new Paragraph("Color guard, forward march. [wait for color guard to reach the front and stop]"),
+          new Paragraph("Color guard, prepare to retire the colors. [wait for color guard to arrive at flag stands and stop]"),
+          new Paragraph("Scout salute. [salute for about 3 seconds]"),
           new Paragraph("Two."),
-          new Paragraph("Color guard, retire the colors and return to ranks. [wait]"),
-          new Paragraph("Retreat. [wait for color guard to reach the back of the room]"),
+          new Paragraph("Color guard, retrieve the colors."),
+          new Paragraph("Color guard, return to ranks. [wait for color guard to re-form as a single unit and stop]"),
+          new Paragraph("Color guard about, face"),
+          new Paragraph("Color guard, forward march. [wait for color guard to reach the back of the room]"),
           new Paragraph("Color guard, dismissed."),
-          new Paragraph("Troop dismissed. Thank you for coming!"),
+          new Paragraph("Troop dismissed. Thank you for coming"),
         ],
       },
     ],
@@ -284,37 +386,59 @@ function generateRankSection(
       );
 
       // Add the descriptive prose for the rank
-      if (RANK_PROSE[r]) {
+      if (r === "Eagle") {
         paras.push(
           new Paragraph({
             children: [
               new TextRun({ text: `${mc}: `, bold: true }),
-              new TextRun(RANK_PROSE[r]),
+              new TextRun("Would any and all Eagle Scouts in the room please rise? [Pause]"),
+            ]
+          }),
+          new Paragraph("You may be seated."),
+          new Paragraph("The Eagle Rank is Scouting’s highest award. Only a small percentage of Scouts have ever reached this lofty goal. The Eagle Rank is presented in a special Eagle Scout Court of Honor."),
+          new Paragraph("Tonight we are recognizing scouts who are reaching Eagle Rank. Would you please stand and be recognized for your achievement.")
+        );
+
+        for (const s of list) {
+          paras.push(new Paragraph({ text: s, bullet: { level: 0 } }));
+        }
+
+        paras.push(new Paragraph(" "));
+        paras.push(new Paragraph("[Lead applause]"));
+        paras.push(new Paragraph(" "));
+      } else {
+        if (RANK_PROSE[r]) {
+          paras.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${mc}: `, bold: true }),
+                new TextRun(RANK_PROSE[r]),
+              ],
+            })
+          );
+          paras.push(new Paragraph(" "));
+        }
+
+        paras.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${mc}: `, bold: true }),
+              new TextRun(`The following Scouts have achieved ${r} Rank:`),
             ],
           })
         );
+
+        for (const s of list) {
+          paras.push(new Paragraph({ text: s, bullet: { level: 0 } }));
+        }
+
+        paras.push(new Paragraph(" "));
+        paras.push(new Paragraph(`[Wait for all scouts to be in place on the stage]`));
+        paras.push(
+          new Paragraph(`New ${r.toUpperCase()} scouts, wear your badge with pride. [Lead applause]`)
+        );
         paras.push(new Paragraph(" "));
       }
-
-      paras.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: `${mc}: `, bold: true }),
-            new TextRun(`The following Scouts have achieved ${r} Rank:`),
-          ],
-        })
-      );
-
-      for (const s of list) {
-        paras.push(new Paragraph({ text: s, bullet: { level: 0 } }));
-      }
-
-      paras.push(new Paragraph(" "));
-      paras.push(new Paragraph(`[Wait for all scouts to be in place on the stage]`));
-      paras.push(
-        new Paragraph(`New ${r.toUpperCase()} scouts, wear your badge with pride. [Lead applause]`)
-      );
-      paras.push(new Paragraph(" "));
     }
   }
 
@@ -323,19 +447,13 @@ function generateRankSection(
 
 function generateAwardsSection(awards: { scout: string; award: string }[], opts: ScriptOptions): Paragraph[] {
   const paras: Paragraph[] = [];
-  let useMc1 = false;
-  let lastMc = opts.mc2Name; // Assume MC2 just finished an intro or we are starting with MC1. Actually, let's just force the first one to print.
+  let lastMc = opts.mc2Name; // Assume MC2 just finished the intro
 
   for (const { scout, award } of awards) {
-    let mc = useMc1 ? opts.mc1Name : opts.mc2Name;
-    useMc1 = !useMc1;
+    let mc = opts.mc2Name;
 
-    if (scout.toLowerCase().includes(opts.mc1Name.toLowerCase())) {
-      mc = opts.mc2Name;
-      useMc1 = true;
-    } else if (scout.toLowerCase().includes(opts.mc2Name.toLowerCase())) {
+    if (scout.toLowerCase().includes(opts.mc2Name.toLowerCase())) {
       mc = opts.mc1Name;
-      useMc1 = false;
     }
 
     if (mc !== lastMc) {

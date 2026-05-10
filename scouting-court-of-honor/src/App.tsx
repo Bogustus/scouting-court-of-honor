@@ -1,9 +1,57 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { FileUp, File, X, Download, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseUploadFile, type ScoutAwardInfo } from "./lib/parser";
 import { generateDocxScript, type ScriptOptions } from "./lib/generator";
+
+function getNextMondayDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7));
+  return d.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "2-digit" });
+}
+
+function extractDateFromFilename(filename: string): string | null {
+  const match = filename.match(/(\d{1,2})[._-](\d{1,2})(?:[._-](\d{2,4}))?/);
+  if (match) {
+    const month = match[1];
+    const day = match[2];
+    let yearRaw = match[3];
+    
+    if (!yearRaw) {
+      const yearMatch = filename.match(/(20\d{2})/);
+      if (yearMatch) {
+         yearRaw = yearMatch[1];
+      }
+    }
+
+    let year = new Date().getFullYear();
+    if (yearRaw) {
+       year = yearRaw.length === 2 ? parseInt(`20${yearRaw}`) : parseInt(yearRaw);
+    }
+    
+    const d = new Date(year, parseInt(month) - 1, parseInt(day));
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "2-digit" });
+    }
+  }
+  return null;
+}
+
+export interface ExtendedOptions extends ScriptOptions {
+  advChairsName: string;
+  advChairsEmail: string;
+  leadershipName: string;
+  leadershipEmail: string;
+  bruceName: string;
+  bruceEmail: string;
+  youthLeadersName: string;
+  youthLeadersEmail: string;
+  troopListEmail: string;
+  mcEmails: string;
+  colorGuardEmails: string;
+  googleDocLink: string;
+}
 
 export default function App() {
   const [fileRecords, setFileRecords] = useState<{ file: File; data: ScoutAwardInfo[] }[]>([]);
@@ -11,23 +59,63 @@ export default function App() {
   
   const data = fileRecords.flatMap(record => record.data);
 
-  // Setup options
-  const [options, setOptions] = useState<ScriptOptions>({
-    date: new Date().toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "2-digit" }),
-    time: "7:00PM-8:00PM",
-    location: "St. Stephens",
-    mc1Name: "Scout A",
-    mc2Name: "Scout B",
-    scoutmasterName: "Scoutmaster",
+  // Setup options with LocalStorage Persistence
+  const [options, setOptions] = useState<ExtendedOptions>(() => {
+    const saved = localStorage.getItem("coh_options");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Ensure color guard exists in case migrating from old state
+        return { colorGuardNames: "Scout C, Scout D", introTitle: "Unit Commissioner", ...parsed };
+      } catch (e) {}
+    }
+    return {
+      date: getNextMondayDate(),
+      time: "7:00PM-8:00PM",
+      location: "St. Stephens",
+      mc1Name: "Scout A",
+      mc2Name: "Scout B",
+      colorGuardNames: "Scout C, Scout D",
+      scoutmasterName: "Bruce McGurk",
+      introTitle: "Unit Commissioner",
+      advChairsName: "Denise and Katherine",
+      advChairsEmail: "",
+      leadershipName: "Michael and Dennis",
+      leadershipEmail: "",
+      bruceName: "Bruce",
+      bruceEmail: "",
+      youthLeadersName: "Ira and Jordan",
+      youthLeadersEmail: "",
+      troopListEmail: "troop303-orinda@googlegroups.com",
+      mcEmails: "",
+      colorGuardEmails: "",
+      googleDocLink: "https://docs.google.com/document/d/..."
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem("coh_options", JSON.stringify(options));
+  }, [options]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const newRecords: { file: File; data: ScoutAwardInfo[] }[] = [];
+    let extractedDate: string | null = null;
+    
     for (const file of acceptedFiles) {
       const parsed = await parseUploadFile(file);
       newRecords.push({ file, data: parsed });
+      
+      // Attempt to extract date from the first file we see
+      if (!extractedDate) {
+        extractedDate = extractDateFromFilename(file.name);
+      }
     }
     setFileRecords((prev) => [...prev, ...newRecords]);
+
+    // Update the options explicitly if a date was found in the filename
+    if (extractedDate) {
+      setOptions(prev => ({ ...prev, date: extractedDate as string }));
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: {
@@ -64,11 +152,15 @@ export default function App() {
     }
   };
 
+  const buildEmailLink = (to: string, subject: string, body: string) => {
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const getUniqueScouts = () => Array.from(new Set(data.map(d => d.originalName))).sort((a, b) => a.localeCompare(b));
+
   const handleGenerateEmail = () => {
     if (data.length === 0) return;
-
-    // Isolate unique scout names and format them
-    const uniqueScouts = Array.from(new Set(data.map(d => d.originalName))).sort((a, b) => a.localeCompare(b));
+    const uniqueScouts = getUniqueScouts();
     
     // Attempt to compute the day of the week
     let dayOfWeek = "Monday";
@@ -251,15 +343,172 @@ ${uniqueScouts.join('\n')}
               </label>
             </div>
             
-            <label className="block space-y-1.5 pb-2">
-              <span className="text-sm font-medium text-slate-400">Scoutmaster / Commissioner Name</span>
-              <input
-                type="text"
-                value={options.scoutmasterName}
-                onChange={(e) => setOptions({ ...options, scoutmasterName: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-              />
-            </label>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-700">
+              <label className="block space-y-1.5 pb-2">
+                <span className="text-sm font-medium text-slate-400">Intro Speaker Name</span>
+                <input
+                  type="text"
+                  value={options.scoutmasterName}
+                  onChange={(e) => setOptions({ ...options, scoutmasterName: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                />
+              </label>
+              
+              <label className="block space-y-1.5 pb-2">
+                <span className="text-sm font-medium text-slate-400">Intro Speaker Title</span>
+                <input
+                  type="text"
+                  value={options.introTitle}
+                  onChange={(e) => setOptions({ ...options, introTitle: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                />
+              </label>
+            </div>
+
+            <div className="pt-2 border-t border-slate-700">
+              <label className="block space-y-1.5 pb-2">
+                <span className="text-sm font-medium text-slate-400">Color Guard Names</span>
+                <input
+                  type="text"
+                  value={options.colorGuardNames}
+                  onChange={(e) => setOptions({ ...options, colorGuardNames: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                />
+              </label>
+            </div>
+
+            <hr className="border-slate-700 my-2" />
+            <h3 className="text-lg font-bold">Coordination Contacts (Names vs. Emails)</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Adv. Chairs Name(s)</span>
+                <input
+                  type="text"
+                  value={options.advChairsName}
+                  onChange={(e) => setOptions({ ...options, advChairsName: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Adv. Chairs Email(s)</span>
+                <input
+                  type="text"
+                  value={options.advChairsEmail}
+                  onChange={(e) => setOptions({ ...options, advChairsEmail: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs placeholder:text-slate-600"
+                  placeholder="denise@..., kath@..."
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Bruce's Name</span>
+                <input
+                  type="text"
+                  value={options.bruceName}
+                  onChange={(e) => setOptions({ ...options, bruceName: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Bruce's Email</span>
+                <input
+                  type="text"
+                  value={options.bruceEmail}
+                  onChange={(e) => setOptions({ ...options, bruceEmail: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs placeholder:text-slate-600"
+                  placeholder="bruce@..."
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Leadership Team Name(s)</span>
+                <input
+                  type="text"
+                  value={options.leadershipName}
+                  onChange={(e) => setOptions({ ...options, leadershipName: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Leadership Team Email(s)</span>
+                <input
+                  type="text"
+                  value={options.leadershipEmail}
+                  onChange={(e) => setOptions({ ...options, leadershipEmail: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Youth Leaders (SPLs)</span>
+                <input
+                  type="text"
+                  value={options.youthLeadersName}
+                  onChange={(e) => setOptions({ ...options, youthLeadersName: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Youth Leaders Email(s)</span>
+                <input
+                  type="text"
+                  value={options.youthLeadersEmail}
+                  onChange={(e) => setOptions({ ...options, youthLeadersEmail: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">MC Email(s)</span>
+                <input
+                  type="text"
+                  value={options.mcEmails}
+                  onChange={(e) => setOptions({ ...options, mcEmails: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs placeholder:text-slate-600"
+                  placeholder="For milestone 6 emailing"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Color Guard Email(s)</span>
+                <input
+                  type="text"
+                  value={options.colorGuardEmails}
+                  onChange={(e) => setOptions({ ...options, colorGuardEmails: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs placeholder:text-slate-600"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Troop Distro Email</span>
+                <input
+                  type="text"
+                  value={options.troopListEmail}
+                  onChange={(e) => setOptions({ ...options, troopListEmail: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-400">Google Doc Script Link</span>
+                <input
+                  type="text"
+                  value={options.googleDocLink}
+                  onChange={(e) => setOptions({ ...options, googleDocLink: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xs placeholder:text-slate-600"
+                  placeholder="https://docs.google.com/..."
+                />
+              </label>
+            </div>
 
             <div className="flex flex-col xl:flex-row gap-3 pt-2">
               <button
@@ -288,6 +537,127 @@ ${uniqueScouts.join('\n')}
                 Email Draft (.txt)
               </button>
             </div>
+          </div>
+        </motion.section>
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+          className="col-span-1 md:col-span-2 bg-slate-800/50 backdrop-blur-xl border border-slate-700 p-6 rounded-3xl mt-4"
+        >
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+            <span className="bg-primary-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
+            Milestone Tracker / Automations
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a 
+              href={buildEmailLink(
+                options.advChairsEmail, 
+                `Advancement and Court of Honor ${options.date}`,
+                `Hey ${options.advChairsName}, we have a Court of Honor on Monday, ${options.date}. Where are we on the data for that? If I can get the report by Saturday morning, I can make the script for the MC's so they have time to look at it over the weekend.`
+              )}
+              target="_blank" rel="noopener noreferrer"
+              className="p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-primary-500 transition-all flex items-start gap-3 group"
+            >
+              <div className="bg-slate-700 p-2 rounded-lg text-slate-300 group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Mail size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-200">1. Data Request (3 Weeks Out)</h3>
+                <p className="text-xs text-slate-400 mt-1">To: Advancement Chairs</p>
+              </div>
+            </a>
+
+            <a 
+              href={buildEmailLink(
+                options.bruceEmail, 
+                `Troop 303 Court of Honor - ${options.date}`,
+                `Hey ${options.bruceName}, will you be able to make it to the Court of Honor on Monday, ${options.date}? It's always nice to have you there to officially open and close the ceremony.`
+              )}
+              target="_blank" rel="noopener noreferrer"
+              className="p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-primary-500 transition-all flex items-start gap-3 group"
+            >
+              <div className="bg-slate-700 p-2 rounded-lg text-slate-300 group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Mail size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-200">2. Bruce's Reminder</h3>
+                <p className="text-xs text-slate-400 mt-1">To: Bruce (No CCs)</p>
+              </div>
+            </a>
+
+            <a 
+              href={buildEmailLink(
+                [options.youthLeadersEmail, options.leadershipEmail].filter(Boolean).join(", "), 
+                `MC & Color Guard Recruitment - ${options.date}`,
+                `Hi ${options.youthLeadersName},\n\nI’m starting to build out the team for our upcoming CoH on Monday, ${options.date}. Who will be serving as our MCs and who is assigned to the Color Guard?\n\nI’d like to get their names into the script as soon as possible. As a reminder, they need to arrive at 6:00 PM for rehearsal.`
+              )}
+              target="_blank" rel="noopener noreferrer"
+              className="p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-primary-500 transition-all flex items-start gap-3 group"
+            >
+              <div className="bg-slate-700 p-2 rounded-lg text-slate-300 group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Mail size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-200">3. Recruitment Request</h3>
+                <p className="text-xs text-slate-400 mt-1">To: SPLs, Leadership Team</p>
+              </div>
+            </a>
+
+            <a 
+              href={buildEmailLink(
+                options.troopListEmail, 
+                `Recognition Preview - ${options.date}`,
+                `The following scouts will be recognized at the Court of Honor on ${options.date}:\n\n${getUniqueScouts().map(s => `• ${s}`).join('\n')}\n\nPlease let me know if any corrections are needed.`
+              )}
+              target="_blank" rel="noopener noreferrer"
+              onClick={(e) => { if (data.length === 0) { e.preventDefault(); alert("Upload a spreadsheet to populate scout names first!"); } }}
+              className={`p-4 bg-slate-800 rounded-xl border ${data.length > 0 ? "border-slate-700 hover:border-primary-500 cursor-pointer group" : "border-red-900/50 opacity-50 cursor-not-allowed"} transition-all flex items-start gap-3`}
+            >
+              <div className={`p-2 rounded-lg transition-colors ${data.length > 0 ? "bg-slate-700 text-slate-300 group-hover:bg-primary-500 group-hover:text-white" : "bg-slate-800 text-slate-600"}`}>
+                <Mail size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-200">4. Parent Recognition Preview</h3>
+                <p className="text-xs text-slate-400 mt-1">To: Troop Distro (Requires Parsed File)</p>
+              </div>
+            </a>
+
+            <a 
+              href={buildEmailLink(
+                options.advChairsEmail, 
+                `Script Ready for Review - ${options.date}`,
+                `The script is ready. Here is the link to the google doc: ${options.googleDocLink}\n\nPlease correct any mistakes you see before I send it out to the scouts.`
+              )}
+              target="_blank" rel="noopener noreferrer"
+              className="p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-primary-500 transition-all flex items-start gap-3 group"
+            >
+              <div className="bg-slate-700 p-2 rounded-lg text-slate-300 group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Mail size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-200">5. Coordinator Review</h3>
+                <p className="text-xs text-slate-400 mt-1">To: Advancement Chairs</p>
+              </div>
+            </a>
+
+            <a 
+              href={buildEmailLink(
+                [options.mcEmails, options.colorGuardEmails, options.youthLeadersEmail].filter(Boolean).join(", "), 
+                `Final Script & Rehearsal Instructions - ${options.date}`,
+                `${options.mc1Name} and ${options.mc2Name}, thank-you for being our MC's. ${options.colorGuardNames}, thank-you for being the Color Guard.\n\nPlease arrive at 6:00 PM (one hour early) for rehearsal. Here is the link to the script: ${options.googleDocLink}\n\nMCs, please be prepared to pronounce all scout names correctly.`
+              )}
+              target="_blank" rel="noopener noreferrer"
+              className="p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-primary-500 transition-all flex items-start gap-3 group"
+            >
+              <div className="bg-slate-700 p-2 rounded-lg text-slate-300 group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Mail size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-200">6. Final Script & Logistics</h3>
+                <p className="text-xs text-slate-400 mt-1">To: MCs, Color Guard, SPLs</p>
+              </div>
+            </a>
+
           </div>
         </motion.section>
       </main>
