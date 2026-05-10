@@ -88,7 +88,7 @@ export async function generateDocxScript(data: ScoutAwardInfo[], opts: ScriptOpt
             children: [
               new TextRun({ text: `${opts.mc1Name}: `, bold: true }),
               new TextRun(
-                `At this time I would like to introduce our ${opts.introTitle} to give our ceremony's introduction.`
+                `At this time I would like to introduce ${opts.scoutmasterName}, our ${opts.introTitle}, to give our ceremony's introduction.`
               ),
             ],
           }),
