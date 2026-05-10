@@ -135,7 +135,17 @@ export default function App() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `CoH_Script_${options.date.replace(/\//g, "-")}.docx`;
+      let fileName = `CoH Script.docx`;
+      try {
+        const d = new Date(options.date);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = d.getMonth() + 1;
+          const day = d.getDate();
+          fileName = `${year} ${month}-${day} CoH Script.docx`;
+        }
+      } catch (e) {}
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

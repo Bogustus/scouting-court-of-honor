@@ -302,7 +302,7 @@ function groupData(data: ScoutAwardInfo[]) {
   };
 
   const meritBadges: { [scout: string]: string[] } = {};
-  const awards: { scout: string; award: string }[] = [];
+  const awardsMap: { [scout: string]: string[] } = {};
 
   for (const item of data) {
     const rawType = item.type.toLowerCase();
@@ -329,7 +329,10 @@ function groupData(data: ScoutAwardInfo[]) {
         meritBadges[item.scoutName].push(cleanAward);
       }
     } else {
-      awards.push({ scout: item.scoutName, award: item.award });
+      if (!awardsMap[item.scoutName]) awardsMap[item.scoutName] = [];
+      if (!awardsMap[item.scoutName].includes(item.award)) {
+        awardsMap[item.scoutName].push(item.award);
+      }
     }
   }
 
@@ -343,7 +346,11 @@ function groupData(data: ScoutAwardInfo[]) {
     .sort()
     .map((name) => ({ name, badges: meritBadges[name].sort() }));
 
-  return { ranks, meritBadges: sortedMeritBadges, awards };
+  const sortedAwards = Object.keys(awardsMap)
+    .sort()
+    .map((name) => ({ name, awards: awardsMap[name].sort() }));
+
+  return { ranks, meritBadges: sortedMeritBadges, awards: sortedAwards };
 }
 
 const RANK_PROSE: { [key: string]: string } = {
@@ -445,14 +452,14 @@ function generateRankSection(
   return paras;
 }
 
-function generateAwardsSection(awards: { scout: string; award: string }[], opts: ScriptOptions): Paragraph[] {
+function generateAwardsSection(awards: { name: string; awards: string[] }[], opts: ScriptOptions): Paragraph[] {
   const paras: Paragraph[] = [];
   let lastMc = opts.mc2Name; // Assume MC2 just finished the intro
 
-  for (const { scout, award } of awards) {
+  for (const { name, awards: scoutAwards } of awards) {
     let mc = opts.mc2Name;
 
-    if (scout.toLowerCase().includes(opts.mc2Name.toLowerCase())) {
+    if (name.toLowerCase().includes(opts.mc2Name.toLowerCase())) {
       mc = opts.mc1Name;
     }
 
@@ -466,11 +473,22 @@ function generateAwardsSection(awards: { scout: string; award: string }[], opts:
       lastMc = mc;
     }
 
+    let awardText = "";
+    if (scoutAwards.length === 1) {
+      awardText = `the ${scoutAwards[0]}`;
+    } else if (scoutAwards.length === 2) {
+      awardText = `the ${scoutAwards[0]} and the ${scoutAwards[1]}`;
+    } else {
+      const allButLast = scoutAwards.slice(0, scoutAwards.length - 1).join(", the ");
+      const last = scoutAwards[scoutAwards.length - 1];
+      awardText = `the ${allButLast}, and the ${last}`;
+    }
+
     paras.push(
       new Paragraph({
         children: [
-          new TextRun({ text: `${scout}`, bold: true }),
-          new TextRun(` gets the ${award}.`),
+          new TextRun({ text: `${name}`, bold: true }),
+          new TextRun(` gets ${awardText}.`),
         ],
       })
     );
