@@ -4,6 +4,7 @@ import { FileUp, File, X, Download, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseUploadFile, type ScoutAwardInfo } from "./lib/parser";
 import { generateDocxScript, type ScriptOptions } from "./lib/generator";
+import { compareByLastName } from "./lib/sort";
 
 function getNextMondayDate() {
   const d = new Date();
@@ -166,7 +167,7 @@ export default function App() {
     return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
-  const getUniqueScouts = () => Array.from(new Set(data.map(d => d.originalName))).sort((a, b) => a.localeCompare(b));
+  const getUniqueScouts = () => Array.from(new Set(data.map(d => d.scoutName))).sort(compareByLastName);
 
   const handleGenerateEmail = () => {
     if (data.length === 0) return;

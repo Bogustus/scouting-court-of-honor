@@ -1,5 +1,6 @@
 import type { ScoutAwardInfo } from "./parser";
 import { Document, Paragraph, TextRun, Packer, HeadingLevel, AlignmentType } from "docx";
+import { compareByLastName } from "./sort";
 
 export interface ScriptOptions {
   date: string;
@@ -336,18 +337,18 @@ function groupData(data: ScoutAwardInfo[]) {
     }
   }
 
-  // Sort scout names in rank maps
+  // Sort scout names alphabetically by last name in rank maps
   for (const group in ranks) {
-    ranks[group].sort();
+    ranks[group].sort(compareByLastName);
   }
 
-  // Sort scouts alphabetically for merit badges
+  // Sort scouts alphabetically by last name for merit badges
   const sortedMeritBadges = Object.keys(meritBadges)
-    .sort()
+    .sort(compareByLastName)
     .map((name) => ({ name, badges: meritBadges[name].sort() }));
 
   const sortedAwards = Object.keys(awardsMap)
-    .sort()
+    .sort(compareByLastName)
     .map((name) => ({ name, awards: awardsMap[name].sort() }));
 
   return { ranks, meritBadges: sortedMeritBadges, awards: sortedAwards };
